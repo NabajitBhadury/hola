@@ -1,0 +1,77 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+      default-filters:
+        - name: JwtAuthentication
+      routes:
+        - id: iam-service
+          uri: lb://iam-service
+          predicates:
+            - Path=/api/v1/auth/**, /api/v1/users/**
+        - id: student-service
+          uri: lb://student-service
+          predicates:
+            - Path=/api/v1/students/**, /api/v1/student-documents/**, /api/v1/theses/**
+        - id: faculty-service
+          uri: lb://faculty-service
+          predicates:
+            - Path=/api/v1/faculties/**, /api/v1/departments/**, /api/v1/workloads/**, /api/v1/research-projects/**
+        - id: curriculum-service
+          uri: lb://curriculum-service
+          predicates:
+            - Path=/api/v1/courses/**, /api/v1/curriculums/**, /api/v1/exams/**, /api/v1/grades/**
+        - id: compliance-service
+          uri: lb://compliance-service
+          predicates:
+            - Path=/api/v1/audits/**, /api/v1/compliance/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      slidingWindowSize: 10
+      permittedNumberOfCallsInHalfOpenState: 5
+      failureRateThreshold: 50
+      waitDurationInOpenState: 10000
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    org.perfecto.micro: DEBUG
