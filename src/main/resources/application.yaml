@@ -1,104 +1,56 @@
-server:
-  port: 8080
+package com.edusphere.api_gateway.controller;
 
-spring:
-  application:
-    name: api-gateway
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      default-filters:
-        - name: JwtAuthentication
-      routes:
-        - id: iam-service
-          uri: lb://iam-service
-          predicates:
-            - Path=/api/v1/auth/**, /api/v1/users/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: iam-service
-                fallbackUri: forward:/fallback/iam-service
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-        - id: student-service
-          uri: lb://student-service
-          predicates:
-            - Path=/api/v1/students/**, /api/v1/student-documents/**, /api/v1/theses/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: student-service
-                fallbackUri: forward:/fallback/student-service
+import java.time.Instant;
+import java.util.Map;
 
-        - id: faculty-service
-          uri: lb://faculty-service
-          predicates:
-            - Path=/api/v1/faculties/**, /api/v1/departments/**, /api/v1/workloads/**, /api/v1/research-projects/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: faculty-service
-                fallbackUri: forward:/fallback/faculty-service
+/**
+ * Handles circuit breaker fallback responses for all downstream services.
+ * Each route in application.yaml points its fallbackUri here.
+ */
+@RestController
+public class FallbackController {
 
-        - id: curriculum-service
-          uri: lb://curriculum-service
-          predicates:
-            - Path=/api/v1/courses/**, /api/v1/curriculums/**, /api/v1/exams/**, /api/v1/grades/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: curriculum-service
-                fallbackUri: forward:/fallback/curriculum-service
+    @RequestMapping("/fallback/iam-service")
+    public ResponseEntity<Map<String, Object>> iamServiceFallback() {
+        return buildFallback("IAM / Auth service is temporarily unavailable. Please try again later.");
+    }
 
-        - id: compliance-service
-          uri: lb://compliance-service
-          predicates:
-            - Path=/api/v1/audits/**, /api/v1/compliance/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: compliance-service
-                fallbackUri: forward:/fallback/compliance-service
+    @RequestMapping("/fallback/student-service")
+    public ResponseEntity<Map<String, Object>> studentServiceFallback() {
+        return buildFallback("Student service is temporarily unavailable. Please try again later.");
+    }
 
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/api/v1/notifications/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: notification-service
-                fallbackUri: forward:/fallback/notification-service
+    @RequestMapping("/fallback/faculty-service")
+    public ResponseEntity<Map<String, Object>> facultyServiceFallback() {
+        return buildFallback("Faculty service is temporarily unavailable. Please try again later.");
+    }
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+    @RequestMapping("/fallback/curriculum-service")
+    public ResponseEntity<Map<String, Object>> curriculumServiceFallback() {
+        return buildFallback("Curriculum service is temporarily unavailable. Please try again later.");
+    }
 
-management:
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: http://localhost:9411/api/v2/spans
-  endpoints:
-    web:
-      exposure:
-        include: health, info, metrics
+    @RequestMapping("/fallback/compliance-service")
+    public ResponseEntity<Map<String, Object>> complianceServiceFallback() {
+        return buildFallback("Compliance service is temporarily unavailable. Please try again later.");
+    }
 
-resilience4j.circuitbreaker:
-  configs:
-    default:
-      slidingWindowSize: 10
-      permittedNumberOfCallsInHalfOpenState: 5
-      failureRateThreshold: 50
-      waitDurationInOpenState: 10000
+    @RequestMapping("/fallback/notification-service")
+    public ResponseEntity<Map<String, Object>> notificationServiceFallback() {
+        return buildFallback("Notification service is temporarily unavailable. Please try again later.");
+    }
 
-logging:
-  level:
-    org.springframework.cloud.gateway: INFO
-    com.edusphere.api_gateway: DEBUG
+    private ResponseEntity<Map<String, Object>> buildFallback(String message) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                "status", HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "error", HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
+                "message", message,
+                "time", Instant.now().toString()
+        ));
+    }
+}
